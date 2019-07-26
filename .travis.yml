@@ -1,0 +1,31 @@
+language: generic
+sudo: required
+services:
+  - docker
+
+before_install:
+  # Build the test images of the projects under testing
+  - docker build -t kuldeepaujla/multi-docker-worker -f ./worker/Dockerfile.dev ./worker
+  - docker build -t kuldeepaujla/multi-docker-server -f ./server/Dockerfile.dev ./server
+  - docker build -t kuldeepaujla/multi-docker-client -f ./client/Dockerfile.dev ./client
+  - docker build -t kuldeepaujla/multi-docker-nginx -f ./nginx/Dockerfile.dev ./nginx
+
+scripts:
+  # Run the tests on the test builds generated in before_install step
+  - docker run -e CI=true kuldeepaujla/multi-docker-client npm test
+
+after_success:
+  # If tests are successful, create production images
+  - docker build -t kuldeepaujla/multi-docker-worker ./worker
+  - docker build -t kuldeepaujla/multi-docker-server ./server
+  - docker build -t kuldeepaujla/multi-docker-client ./client
+  - docker build -t kuldeepaujla/multi-docker-nginx ./nginx
+
+  # Log in to docker hub
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+
+  # Push to all images docker hub
+  - docker push kuldeepaujla/multi-docker-worker
+  - docker push kuldeepaujla/multi-docker-server
+  - docker push kuldeepaujla/multi-docker-client
+  - docker push kuldeepaujla/multi-docker-nginx
